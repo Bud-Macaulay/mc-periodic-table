@@ -1,5 +1,3 @@
-import defaultColors from "./data/defaultColors.json";
-
 export type RGB = { r: number; g: number; b: number };
 type BaseColorMap = Record<string, string>;
 
@@ -41,10 +39,8 @@ export type ColorTransform =
   | { type: "lighten"; amount: number }
   | { type: "darken"; amount: number };
 
-type StateStyle = {
+export type StateStyle = {
   base?: string;
-
   baseByAtomic?: BaseColorMap;
-
   transforms?: Record<number, ColorTransform[]>;
 };

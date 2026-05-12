@@ -1,17 +1,16 @@
 import layout from "./layout.json";
-import styles from "./periodic-table.css?inline";
+import styles from "./style.css?inline";
 
-import defaultColors from "./data/defaultColors";
+import defaultColors from "../data/defaultColors";
 
-import { rgbToHex, hexToRgb, mix } from "./colors";
-import type { StateStyle, ColorTransform } from "./colors";
+import { rgbToHex, hexToRgb, mix, StateStyle, ColorTransform } from "./colors";
 
 const MAX_STATE = 3;
 
 const DEFAULT_STATE_STYLE: Required<StateStyle> = {
   base: "#ffffff", // if for some reason the style is missing.
   transforms: {
-    0: [],
+    0: [], // do nothing.
 
     1: [{ type: "mix", color: "#06c100", amount: 0.75 }],
     2: [{ type: "mix", color: "#ff0000", amount: 0.6 }],
@@ -33,7 +32,62 @@ export class PeriodicTable extends HTMLElement {
 
   private _fields?: Partial<Record<CellSlot, DataSource>>;
 
-  stateStyle?: StateStyle;
+  private _stateCount = 3; // default, on and off.
+
+  private nonInteractiveCells = new Set<number>();
+
+  get stateCount() {
+    return this._stateCount;
+  }
+
+  set stateCount(v: number) {
+    this._stateCount = Math.max(1, v);
+
+    for (const [id, value] of this.state) {
+      if (value >= this._stateCount) {
+        this.state.set(id, 0);
+      }
+    }
+
+    this.render();
+  }
+
+  private _stateStyle?: StateStyle;
+
+  private get resolvedStateStyle(): Required<StateStyle> {
+    return {
+      base: this._stateStyle?.base ?? DEFAULT_STATE_STYLE.base,
+      transforms: {
+        0: [],
+        1: [],
+        2: [],
+        3: [],
+        4: [],
+        ...DEFAULT_STATE_STYLE.transforms,
+        ...this._stateStyle?.transforms,
+      },
+    };
+  }
+
+  setCellInteraction(ids: number[], interactive: boolean) {
+    for (const id of ids) {
+      if (interactive) {
+        this.nonInteractiveCells.delete(id);
+      } else {
+        this.nonInteractiveCells.add(id);
+      }
+
+      const cell = this.cells.get(id);
+      if (!cell) continue;
+
+      cell.classList.toggle("no-interaction", !interactive);
+    }
+  }
+
+  set stateStyle(v: StateStyle | undefined) {
+    this._stateStyle = v;
+    this.render();
+  }
 
   get fields() {
     return this._fields;
@@ -102,15 +156,10 @@ export class PeriodicTable extends HTMLElement {
 
     const id = Number(el.dataset.atomic);
 
+    if (this.nonInteractiveCells.has(id)) return;
+
     this.toggle(id);
   };
-
-  private get styleConfig(): Required<StateStyle> {
-    return {
-      base: this.stateStyle?.base ?? DEFAULT_STATE_STYLE.base,
-      transforms: this.stateStyle?.transforms ?? DEFAULT_STATE_STYLE.transforms,
-    };
-  }
 
   private applyTransforms(base: string, transforms: ColorTransform[] = []) {
     let color = hexToRgb(base ?? "#ffffff");
@@ -140,11 +189,11 @@ export class PeriodicTable extends HTMLElement {
 
     if (key in defaultColors) return defaultColors[key];
 
-    return this.styleConfig.base;
+    return this.resolvedStateStyle.base;
   }
 
   private toggle(id: number) {
-    const next = ((this.state.get(id) ?? 0) + 1) % MAX_STATE;
+    const next = ((this.state.get(id) ?? 0) + 1) % this.stateCount;
 
     this.state.set(id, next);
 
@@ -159,7 +208,7 @@ export class PeriodicTable extends HTMLElement {
     if (next === 0) {
       cell.style.background = base;
     } else {
-      const transforms = this.styleConfig.transforms[next] ?? [];
+      const transforms = this.resolvedStateStyle.transforms[next] ?? [];
 
       cell.style.background = this.applyTransforms(base, transforms);
     }
@@ -220,7 +269,8 @@ export class PeriodicTable extends HTMLElement {
     const data = layout as [number, number, number][];
     const fBlockRows = new Set([8, 9]);
 
-    for (const [row, col, atomic] of data) {
+    data.forEach(([row, col], index) => {
+      const atomic = index + 1;
       const el = document.createElement("div");
 
       const base = this.getBaseColor(atomic);
@@ -243,7 +293,11 @@ export class PeriodicTable extends HTMLElement {
 
       this.cells.set(atomic, el);
       grid.appendChild(el);
-    }
+
+      if (this.nonInteractiveCells.has(atomic)) {
+        el.classList.add("no-interaction");
+      }
+    });
   }
 }
 

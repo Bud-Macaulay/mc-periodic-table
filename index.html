@@ -153,12 +153,17 @@
     </div>
 
     <script type="module">
-      import "/src/periodic-table.ts";
+      import "/src/periodic-table";
       import symbols from "/src/data/symbols.ts";
       import masses from "/src/data/masses.ts";
       import names from "/src/data/names.ts";
 
       const pt = document.getElementById("pt");
+
+      pt.stateCount = 4;
+
+      pt.setCellInteraction([100, 101, 102, 103], false);
+
       const out = document.getElementById("out");
 
       pt.fields = {
