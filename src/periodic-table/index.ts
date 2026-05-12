@@ -95,10 +95,7 @@ export class PeriodicTable extends HTMLElement {
 
   set fields(value) {
     this._fields = value;
-
-    if (this.shadowRoot) {
-      this.render();
-    }
+    this.updateFields();
   }
 
   connectedCallback() {
@@ -214,6 +211,21 @@ export class PeriodicTable extends HTMLElement {
     }
 
     this.scheduleNotify();
+  }
+
+  private updateFields() {
+    for (const [atomic, el] of this.cells.entries()) {
+      const topCenter = el.querySelector(".top-center");
+      const center = el.querySelector(".center");
+
+      if (topCenter) {
+        topCenter.textContent = this.getFieldValue("topCenter", atomic);
+      }
+
+      if (center) {
+        center.textContent = this.getFieldValue("center", atomic);
+      }
+    }
   }
 
   private scheduleNotify() {

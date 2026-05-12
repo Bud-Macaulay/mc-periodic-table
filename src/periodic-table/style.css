@@ -1,11 +1,11 @@
 :host {
-  --font-size: 13px;
+  --font-size: 14px;
   --font-scale-top: 0.9;
-  --font-scale-center: 1;
-  --font-scale-bottom: 0.45;
+  --font-scale-center: 1.4;
+  --font-scale-bottom: 0;
 
   --cell-size: 42px;
-  --gap: 5px;
+  --gap: 3px;
   --f-offset: 14px;
 }
 
@@ -17,7 +17,11 @@
 }
 
 .cell {
+  all: unset;
   display: grid;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1;
 
   grid-template-columns: 1fr auto 1fr;
   grid-template-rows: auto 1fr auto;
@@ -33,8 +37,8 @@
   padding: calc(var(--cell-size) * 0.03);
 
   box-sizing: border-box;
-  border: 0.2px #333 solid;
-  border-radius: 7%;
+  border: 1px #999 solid;
+  border-radius: 2px;
 
   transform: scale(var(--scale, 1));
   user-select: none;
@@ -58,7 +62,7 @@
 }
 
 .cell[data-state]:not([data-state="0"]) {
-  --scale: 1.085;
+  --scale: 1.02;
 }
 
 .cell:hover {
