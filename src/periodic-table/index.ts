@@ -22,6 +22,8 @@ type DataSource =
   | Array<string | number>
   | ((atomic: number) => string | number);
 
+type CellInteractionMode = "normal" | "noHighlight" | "noInteractive";
+
 export class PeriodicTable extends HTMLElement {
   private state = new Map<number, number>();
   private cells = new Map<number, HTMLElement>();
@@ -31,7 +33,9 @@ export class PeriodicTable extends HTMLElement {
 
   private _stateCount = 3; // default, on and off.
 
-  private nonInteractiveCells = new Set<number>();
+  private cellModes = new Map<number, CellInteractionMode>();
+  private noInteractiveCells = new Set<number>();
+  private noHighlightCells = new Set<number>();
 
   get stateCount() {
     return this._stateCount;
@@ -66,19 +70,26 @@ export class PeriodicTable extends HTMLElement {
     };
   }
 
-  setCellInteraction(ids: number[], interactive: boolean) {
+  setCellInteraction(ids: number[], mode: CellInteractionMode) {
     for (const id of ids) {
-      if (interactive) {
-        this.nonInteractiveCells.delete(id);
-      } else {
-        this.nonInteractiveCells.add(id);
-      }
+      this.cellModes.set(id, mode);
 
       const cell = this.cells.get(id);
       if (!cell) continue;
 
-      cell.classList.toggle("no-interaction", !interactive);
+      this.applyCellMode(id, cell);
     }
+  }
+
+  private applyCellMode(id: number, el: HTMLElement) {
+    const mode = this.cellModes.get(id) ?? "normal";
+
+    el.classList.toggle(
+      "no-highlight",
+      mode === "noHighlight" || mode === "noInteractive",
+    );
+
+    el.classList.toggle("no-interaction", mode === "noInteractive");
   }
 
   set stateStyle(v: StateStyle | undefined) {
@@ -150,7 +161,9 @@ export class PeriodicTable extends HTMLElement {
 
     const id = Number(el.dataset.atomic);
 
-    if (this.nonInteractiveCells.has(id)) return;
+    const mode = this.cellModes.get(id) ?? "normal";
+
+    if (mode === "noInteractive") return;
 
     this.toggle(id);
   };
@@ -323,9 +336,7 @@ export class PeriodicTable extends HTMLElement {
       this.cells.set(atomic, el);
       grid.appendChild(el);
 
-      if (this.nonInteractiveCells.has(atomic)) {
-        el.classList.add("no-interaction");
-      }
+      this.applyCellMode(atomic, el);
     });
   }
 }

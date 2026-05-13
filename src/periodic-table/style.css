@@ -19,13 +19,13 @@
 .cell {
   all: unset;
   display: grid;
+
   font-family: inherit;
   font-size: inherit;
   line-height: 1;
 
   grid-template-columns: 1fr auto 1fr;
   grid-template-rows: auto auto auto;
-
   grid-template-areas:
     "topLeft topCenter topRight"
     "center center center"
@@ -33,7 +33,6 @@
 
   width: 100%;
   height: 100%;
-
   padding: calc(var(--cell-size) * 0.03);
 
   box-sizing: border-box;
@@ -41,33 +40,47 @@
   border-radius: 2px;
 
   transform: scale(var(--scale, 1));
+  cursor: pointer;
+
   user-select: none;
 
   transition:
     background 300ms ease,
     transform 300ms ease,
     filter 200ms ease;
-  cursor: pointer;
-}
 
-.cell.no-interaction {
-  pointer-events: none;
-  cursor: default;
-  filter: contrast(20%) brightness(160%);
-}
-
-.cell.no-interaction:hover {
-  --scale: 1;
-  filter: none;
+  --dim-opacity: 1;
+  --dim-filter: none;
+  opacity: var(--dim-opacity);
+  filter: var(--dim-filter);
 }
 
 .cell[data-state]:not([data-state="0"]) {
-  --scale: 1.02;
+  --dim-opacity: 1;
+  --dim-filter: none;
+  scale: 1.05;
+}
+
+.cell.no-highlight {
+  --dim-opacity: 0.6;
+  --dim-filter: contrast(50%) brightness(120%);
+}
+
+.cell.no-interaction {
+  --dim-opacity: 0.4;
+  --dim-filter: grayscale(1) contrast(0.7);
+  pointer-events: none;
+  cursor: default;
 }
 
 .cell:hover {
   --scale: 1.05;
-  filter: brightness(0.85);
+  --dim-filter: brightness(0.9);
+}
+
+/* locked cells should not scale on hover */
+.cell.no-interaction:hover {
+  --scale: 1;
 }
 
 .f-block-row {
