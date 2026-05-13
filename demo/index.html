@@ -174,8 +174,9 @@
       const out = document.getElementById("out");
 
       pt.fields = {
+        // topLeft: (a) => a,
+        // topRight: (a) => masses[a]?.toFixed(1) || "N/A",
         topCenter: (a) => a,
-
         center: (a) => symbols[a],
         bottom: (a) => names[a],
       };

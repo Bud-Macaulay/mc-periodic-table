@@ -1,26 +1,23 @@
-import layout from "./layout.json";
+import layout from "./layout";
 import styles from "./style.css?inline";
 
-import defaultColors from "../data/defaultColors";
+import { palette, colorIndices } from "../data/defaultColors";
 
 import { rgbToHex, hexToRgb, mix, StateStyle, ColorTransform } from "./colors";
-
-const MAX_STATE = 3;
 
 const DEFAULT_STATE_STYLE: Required<StateStyle> = {
   base: "#ffffff", // if for some reason the style is missing.
   transforms: {
     0: [], // do nothing.
-
     1: [{ type: "mix", color: "#06c100", amount: 0.75 }],
     2: [{ type: "mix", color: "#ff0000", amount: 0.6 }],
-    3: [{ type: "darken", amount: 0.2 }],
-    4: [{ type: "lighten", amount: 0.25 }],
   },
 };
 
+// defined slots inside the cell as strings.
 type CellSlot = "topLeft" | "topCenter" | "topRight" | "center" | "bottom";
 
+// loading of a flat array that maps to [0,118] # index 0 should be blank
 type DataSource =
   | Array<string | number>
   | ((atomic: number) => string | number);
@@ -180,11 +177,16 @@ export class PeriodicTable extends HTMLElement {
 
   private getBaseColor(atomic: number): string {
     const key = String(atomic);
-
     const overrides = this.stateStyle?.baseByAtomic;
-    if (overrides && key in overrides) return overrides[key];
+    if (overrides && key in overrides) {
+      return overrides[key];
+    }
 
-    if (key in defaultColors) return defaultColors[key];
+    const paletteIndex = colorIndices[atomic];
+
+    if (paletteIndex !== undefined && palette[paletteIndex]) {
+      return palette[paletteIndex];
+    }
 
     return this.resolvedStateStyle.base;
   }
@@ -215,15 +217,30 @@ export class PeriodicTable extends HTMLElement {
 
   private updateFields() {
     for (const [atomic, el] of this.cells.entries()) {
+      const topLeft = el.querySelector(".top-left");
       const topCenter = el.querySelector(".top-center");
+      const topRight = el.querySelector(".top-right");
       const center = el.querySelector(".center");
+      const bottom = el.querySelector(".bottom");
+
+      if (topLeft) {
+        topLeft.textContent = this.getFieldValue("topLeft", atomic);
+      }
 
       if (topCenter) {
         topCenter.textContent = this.getFieldValue("topCenter", atomic);
       }
 
+      if (topRight) {
+        topRight.textContent = this.getFieldValue("topRight", atomic);
+      }
+
       if (center) {
         center.textContent = this.getFieldValue("center", atomic);
+      }
+
+      if (bottom) {
+        bottom.textContent = this.getFieldValue("bottom", atomic);
       }
     }
   }
@@ -278,7 +295,7 @@ export class PeriodicTable extends HTMLElement {
 
     const grid = root.querySelector("#grid")!;
 
-    const data = layout as [number, number, number][];
+    const data = layout as [number, number][];
     const fBlockRows = new Set([8, 9]);
 
     data.forEach(([row, col], index) => {
