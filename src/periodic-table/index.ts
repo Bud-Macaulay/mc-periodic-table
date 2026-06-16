@@ -127,6 +127,31 @@ export class PeriodicTable extends HTMLElement {
     return Object.fromEntries(this.state);
   }
 
+  setState(newState: Record<number, number>) {
+    // replace full state
+    this.state = new Map(
+      Object.entries(newState).map(([k, v]) => [Number(k), v]),
+    );
+
+    // re-render visuals for ALL affected cells
+    for (const [atomic, el] of this.cells.entries()) {
+      const value = this.state.get(atomic) ?? 0;
+
+      el.setAttribute("data-state", String(value));
+
+      const base = this.getBaseColor(atomic);
+
+      if (value === 0) {
+        el.style.background = base;
+      } else {
+        const transforms = this.resolvedStateStyle.transforms[value] ?? [];
+        el.style.background = this.applyTransforms(base, transforms);
+      }
+    }
+
+    this.scheduleNotify();
+  }
+
   get fBlockOffsetPx(): number {
     return Number(this.getAttribute("f-block-offset-px") ?? 0);
   }
