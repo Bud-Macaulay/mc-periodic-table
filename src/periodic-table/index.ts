@@ -37,6 +37,13 @@ export class PeriodicTable extends HTMLElement {
   private noInteractiveCells = new Set<number>();
   private noHighlightCells = new Set<number>();
 
+  set singleSelect(v) {
+    this._singleSelect = v;
+  }
+  get singleSelect() {
+    return this._singleSelect;
+  }
+
   get stateCount() {
     return this._stateCount;
   }
@@ -230,7 +237,22 @@ export class PeriodicTable extends HTMLElement {
   }
 
   private toggle(id: number) {
-    const next = ((this.state.get(id) ?? 0) + 1) % this.stateCount;
+    if (this.singleSelect) {
+      // clear all previous selections
+      for (const key of this.state.keys()) {
+        this.state.set(key, 0);
+
+        const el = this.cells.get(key);
+        if (el) {
+          el.setAttribute("data-state", "0");
+          el.style.background = this.getBaseColor(key);
+        }
+      }
+    }
+
+    const next = this.singleSelect
+      ? 1
+      : ((this.state.get(id) ?? 0) + 1) % this.stateCount;
 
     this.state.set(id, next);
 
@@ -241,12 +263,10 @@ export class PeriodicTable extends HTMLElement {
 
     const base = this.getBaseColor(id);
 
-    // state 0 = pure base color
     if (next === 0) {
       cell.style.background = base;
     } else {
       const transforms = this.resolvedStateStyle.transforms[next] ?? [];
-
       cell.style.background = this.applyTransforms(base, transforms);
     }
 
