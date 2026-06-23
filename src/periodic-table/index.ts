@@ -26,6 +26,7 @@ type CellInteractionMode = "normal" | "noHighlight" | "noInteractive";
 
 export class PeriodicTable extends HTMLElement {
   private state = new Map<number, number>();
+  private hoveredAtomic?: number;
   private cells = new Map<number, HTMLElement>();
   private scheduled = false;
 
@@ -34,8 +35,6 @@ export class PeriodicTable extends HTMLElement {
   private _stateCount = 3; // default, on and off.
 
   private cellModes = new Map<number, CellInteractionMode>();
-  private noInteractiveCells = new Set<number>();
-  private noHighlightCells = new Set<number>();
 
   set singleSelect(v) {
     this._singleSelect = v;
@@ -46,6 +45,10 @@ export class PeriodicTable extends HTMLElement {
 
   get stateCount() {
     return this._stateCount;
+  }
+
+  get hoveredAtomicNumber() {
+    return this.hoveredAtomic;
   }
 
   set stateCount(v: number) {
@@ -76,6 +79,32 @@ export class PeriodicTable extends HTMLElement {
       },
     };
   }
+
+  private onPointerOver = (e: PointerEvent) => {
+    const el = (e.target as HTMLElement)?.closest(".cell");
+
+    const atomic = el ? Number(el.dataset.atomic) : undefined;
+
+    if (atomic === this.hoveredAtomic) return;
+
+    this.hoveredAtomic = atomic;
+
+    this.dispatchEvent(
+      new CustomEvent("hoverchange", {
+        detail: atomic,
+      }),
+    );
+  };
+
+  private onPointerLeave = () => {
+    this.hoveredAtomic = undefined;
+
+    this.dispatchEvent(
+      new CustomEvent("hoverchange", {
+        detail: undefined,
+      }),
+    );
+  };
 
   setCellInteraction(ids: number[], mode: CellInteractionMode) {
     for (const id of ids) {
@@ -114,7 +143,9 @@ export class PeriodicTable extends HTMLElement {
   }
 
   connectedCallback() {
-    this.attachShadow({ mode: "open" });
+    if (!this.shadowRoot) {
+      this.attachShadow({ mode: "open" });
+    }
 
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(styles);
@@ -124,10 +155,14 @@ export class PeriodicTable extends HTMLElement {
 
     this.render();
     this.shadowRoot!.addEventListener("click", this.onClick);
+    this.shadowRoot!.addEventListener("pointermove", this.onPointerOver);
+    this.shadowRoot!.addEventListener("pointerleave", this.onPointerLeave);
   }
 
   disconnectedCallback() {
     this.shadowRoot?.removeEventListener("click", this.onClick);
+    this.shadowRoot?.removeEventListener("pointermove", this.onPointerOver);
+    this.shadowRoot?.removeEventListener("pointerleave", this.onPointerLeave);
   }
 
   getState() {

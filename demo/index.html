@@ -154,6 +154,9 @@
           <input id="fOffset" type="range" min="0" max="40" value="14" />
         </div>
 
+        <h3>Hover</h3>
+        <pre id="hoverOut">none</pre>
+
         <h3>State</h3>
         <pre id="out">click elements…</pre>
       </div>
@@ -186,6 +189,12 @@
 
       pt.addEventListener("change", (e) => {
         out.textContent = JSON.stringify(e.detail, null, 2);
+      });
+
+      const hoverOut = document.getElementById("hoverOut");
+
+      pt.addEventListener("hoverchange", (e) => {
+        hoverOut.textContent = JSON.stringify(e.detail, null, 2);
       });
 
       const bind = (id, unit, prop, labelId) => {
