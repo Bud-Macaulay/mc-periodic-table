@@ -5,7 +5,15 @@ import abundance from "./abundance";
 import { palette, colorIndices } from "./defaultColors";
 import { covalentRadii } from "./radii";
 
-export { symbols, names, masses, abundance, palette, colorIndices };
+export {
+  symbols,
+  names,
+  masses,
+  abundance,
+  palette,
+  colorIndices,
+  covalentRadii,
+};
 
 export const elementData = {
   symbols,
