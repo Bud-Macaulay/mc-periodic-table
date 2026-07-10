@@ -5,6 +5,16 @@ import { palette, colorIndices } from "../data/defaultColors";
 
 import { rgbToHex, hexToRgb, mix, StateStyle, ColorTransform } from "./colors";
 
+export type ColorByProperty =
+  | ((atomic: number) => number | null | undefined)
+  | {
+      value: (atomic: number) => number | null | undefined;
+      lowColor?: string;
+      highColor?: string;
+      min?: number;
+      max?: number;
+    };
+
 const DEFAULT_STATE_STYLE: Required<StateStyle> = {
   base: "#ffffff", // if for some reason the style is missing.
   transforms: {
@@ -19,8 +29,8 @@ type CellSlot = "topLeft" | "topCenter" | "topRight" | "center" | "bottom";
 
 // loading of a flat array that maps to [0,118] # index 0 should be blank
 type DataSource =
-  | Array<string | number>
-  | ((atomic: number) => string | number);
+  | Array<string | number | null | undefined>
+  | ((atomic: number) => string | number | null | undefined);
 
 type CellInteractionMode = "normal" | "noHighlight" | "noInteractive";
 
@@ -35,6 +45,14 @@ export class PeriodicTable extends HTMLElement {
   private _stateCount = 3; // default, on and off.
 
   private cellModes = new Map<number, CellInteractionMode>();
+
+  private _colorByProperty?: ColorByProperty;
+  private _colorByPropertyFn?: (atomic: number) => number | null | undefined;
+  private _colorByPropertyMin = 0;
+  private _colorByPropertyMax = 1;
+  private _colorByPropertyLow = "#0000ff";
+  private _colorByPropertyHigh = "#ff0000";
+  private _colorByPropertyValues = new Map<number, number>();
 
   set singleSelect(v) {
     this._singleSelect = v;
@@ -133,6 +151,49 @@ export class PeriodicTable extends HTMLElement {
     this.render();
   }
 
+  set colorByProperty(v: ColorByProperty | undefined) {
+    this._colorByProperty = v;
+
+    if (v) {
+      const getValue = typeof v === "function" ? v : v.value;
+      const config = typeof v === "function" ? {} : v;
+
+      this._colorByPropertyFn = getValue;
+      this._colorByPropertyLow = config.lowColor ?? "#0000ff";
+      this._colorByPropertyHigh = config.highColor ?? "#ff0000";
+
+      this._colorByPropertyValues.clear();
+      let min = Infinity;
+      let max = -Infinity;
+
+      for (let atomic = 1; atomic < layout.length; atomic++) {
+        const val = getValue(atomic);
+        if (val !== null && val !== undefined) {
+          this._colorByPropertyValues.set(atomic, val);
+          if (val < min) min = val;
+          if (val > max) max = val;
+        }
+      }
+
+      this._colorByPropertyMin = config.min ?? min;
+      this._colorByPropertyMax = config.max ?? max;
+
+      if (this._colorByPropertyMin >= this._colorByPropertyMax) {
+        this._colorByPropertyMin = 0;
+        this._colorByPropertyMax = 1;
+      }
+    } else {
+      this._colorByPropertyFn = undefined;
+      this._colorByPropertyValues.clear();
+    }
+
+    if (this.shadowRoot) this.render();
+  }
+
+  get colorByProperty() {
+    return this._colorByProperty;
+  }
+
   get fields() {
     return this._fields;
   }
@@ -203,6 +264,22 @@ export class PeriodicTable extends HTMLElement {
     if (this.shadowRoot) this.render();
   }
 
+  getElementData(atomic: number): Record<string, string | number | null | undefined> {
+    const data: Record<string, string | number | null | undefined> = {};
+    const slots = this._fields;
+    if (!slots) return data;
+    for (const slot of Object.keys(slots) as CellSlot[]) {
+      const source = slots[slot as CellSlot];
+      if (!source) continue;
+      if (typeof source === "function") {
+        data[slot] = source(atomic) ?? null;
+      } else {
+        data[slot] = source[atomic] ?? null;
+      }
+    }
+    return data;
+  }
+
   private getFieldValue(slot: CellSlot, atomic: number): string {
     const source = this.fields?.[slot];
 
@@ -256,6 +333,19 @@ export class PeriodicTable extends HTMLElement {
   }
 
   private getBaseColor(atomic: number): string {
+    if (this._colorByProperty) {
+      const val = this._colorByPropertyValues.get(atomic);
+      if (val !== undefined) {
+        const t =
+          (val - this._colorByPropertyMin) /
+          (this._colorByPropertyMax - this._colorByPropertyMin);
+        const clamped = Math.max(0, Math.min(1, t));
+        const low = hexToRgb(this._colorByPropertyLow);
+        const high = hexToRgb(this._colorByPropertyHigh);
+        return rgbToHex(mix(low, high, clamped));
+      }
+    }
+
     const key = String(atomic);
     const overrides = this.stateStyle?.baseByAtomic;
     if (overrides && key in overrides) {

@@ -52,12 +52,31 @@
         width: 100%;
       }
 
+      select {
+        width: 100%;
+        padding: 4px;
+        font-size: 13px;
+      }
+
       pre {
         background: #f6f6f6;
         padding: 10px;
         border-radius: 10px;
         overflow: auto;
         font-size: 12px;
+      }
+
+      .row {
+        display: flex;
+        gap: 4px;
+      }
+
+      .row label {
+        font-size: 12px;
+        opacity: 0.7;
+        display: flex;
+        align-items: center;
+        gap: 4px;
       }
     </style>
   </head>
@@ -154,10 +173,23 @@
           <input id="fOffset" type="range" min="0" max="40" value="14" />
         </div>
 
+        <div class="control">
+          <label>Color by property</label>
+          <select id="colorBy">
+            <option value="">Default (category colors)</option>
+            <option value="electronegativity">Electronegativity</option>
+            <option value="ionizationEnergy">Ionization Energy (eV)</option>
+            <option value="density">Density (g/cm³)</option>
+            <option value="meltingPoint">Melting Point (K)</option>
+            <option value="boilingPoint">Boiling Point (K)</option>
+            <option value="atomicRadius">Atomic Radius (pm)</option>
+          </select>
+        </div>
+
         <h3>Hover</h3>
         <pre id="hoverOut">none</pre>
 
-        <h3>State</h3>
+        <h3>Selected state</h3>
         <pre id="out">click elements…</pre>
       </div>
     </div>
@@ -165,8 +197,15 @@
     <script type="module">
       import "../src/periodic-table";
       import symbols from "../src/data/symbols.ts";
-      import masses from "../src/data/masses.ts";
       import names from "../src/data/names.ts";
+      import electronegativity from "../src/data/electronegativity.ts";
+      import density from "../src/data/density.ts";
+      import meltingPoint from "../src/data/meltingPoint.ts";
+      import boilingPoint from "../src/data/boilingPoint.ts";
+      import atomicRadius from "../src/data/atomicRadius.ts";
+      import ionizationEnergy from "../src/data/ionizationEnergy.ts";
+      import phase from "../src/data/phase.ts";
+      import category from "../src/data/category.ts";
 
       const pt = document.getElementById("pt");
 
@@ -178,23 +217,58 @@
       pt.setCellInteraction([100, 101, 102, 103], "noInteractive");
 
       const out = document.getElementById("out");
+      const hoverOut = document.getElementById("hoverOut");
 
       pt.fields = {
-        // topLeft: (a) => a,
-        // topRight: (a) => masses[a]?.toFixed(1) || "N/A",
         topCenter: (a) => a,
         center: (a) => symbols[a],
         bottom: (a) => names[a],
       };
 
-      pt.addEventListener("change", (e) => {
-        out.textContent = JSON.stringify(e.detail, null, 2);
+      const propertyMap = {
+        electronegativity: { data: electronegativity, low: "#4a90d9", high: "#d94a4a" },
+        ionizationEnergy: { data: ionizationEnergy, low: "#e8c252", high: "#4a4ad9" },
+        density: { data: density, low: "#e8e8e8", high: "#2a2a2a" },
+        meltingPoint: { data: meltingPoint, low: "#4a90d9", high: "#d94a4a" },
+        boilingPoint: { data: boilingPoint, low: "#b8d4e8", high: "#d94a4a" },
+        atomicRadius: { data: atomicRadius, low: "#d94a4a", high: "#4a90d9" },
+      };
+
+      document.getElementById("colorBy").addEventListener("change", (e) => {
+        const key = e.target.value;
+        if (key && propertyMap[key]) {
+          const p = propertyMap[key];
+          pt.colorByProperty = {
+            value: (a) => p.data[a],
+            lowColor: p.low,
+            highColor: p.high,
+          };
+        } else {
+          pt.colorByProperty = undefined;
+        }
       });
 
-      const hoverOut = document.getElementById("hoverOut");
-
       pt.addEventListener("hoverchange", (e) => {
-        hoverOut.textContent = JSON.stringify(e.detail, null, 2);
+        const z = e.detail;
+        if (z === undefined || z === null) {
+          hoverOut.textContent = "none";
+          return;
+        }
+        const data = pt.getElementData(z);
+        hoverOut.textContent = [
+          `#${z} ${symbols[z]} — ${names[z]}`,
+          `  Phase: ${phase[z] ?? "?"}`,
+          `  Category: ${category[z] ?? "?"}`,
+          `  EN: ${electronegativity[z] ?? "?"}`,
+          `  Density: ${density[z] ?? "?"} g/cm³`,
+          `  MP: ${meltingPoint[z] ?? "?"} K`,
+          `  BP: ${boilingPoint[z] ?? "?"} K`,
+          `  Radius: ${atomicRadius[z] ?? "?"} pm`,
+        ].join("\n");
+      });
+
+      pt.addEventListener("change", (e) => {
+        out.textContent = JSON.stringify(e.detail, null, 2);
       });
 
       const bind = (id, unit, prop, labelId) => {
