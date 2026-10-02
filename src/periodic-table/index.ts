@@ -511,4 +511,6 @@ export class PeriodicTable extends HTMLElement {
   }
 }
 
-customElements.define("periodic-table", PeriodicTable);
+if (!customElements.get("periodic-table")) {
+  customElements.define("periodic-table", PeriodicTable);
+}

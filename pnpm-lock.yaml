@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      matsci-parse:
+        specifier: link:../matsci-parse
+        version: link:../matsci-parse
     devDependencies:
       vite:
         specifier: ^5.0.0
