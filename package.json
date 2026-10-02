@@ -22,7 +22,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "matsci-parse": "link:../matsci-parse"
+    "matsci-parse": "0.17.0"
   },
   "devDependencies": {
     "vite": "^5.0.0"
